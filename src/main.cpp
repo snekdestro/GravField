@@ -44,6 +44,7 @@ public:
         }
         float dist = distance(p->x, p->y);
         //need to handle collisions
+        
         if(dist < (p->mass+mass) / 100){
             if((this->mass < p->mass && !this->STATIC)){
                 this->remove = true;
@@ -70,6 +71,7 @@ public:
         if(y < p->y){
             aY *= -1;
         }
+        //wierd ass math that works like magic
         if(!STATIC){
         vx += aX * delta;
         vy += aY * delta;
@@ -85,8 +87,25 @@ int main()
 {
     sf::RectangleShape rect(sf::Vector2f(1920,1080));   
     sf::Shader fieldVecShader;
-    fieldVecShader.loadFromFile("shaders\\fieldvec.frag", sf::Shader::Fragment);
-    float* points[140];
+    //fieldVecShader.loadFromFile("shaders\\fieldvec.frag", sf::Shader::Fragment);
+    std::string file  = "uniform int s;\n"
+    "uniform float data[140];\n"
+    "uniform float masses[70];\n"
+    "void main(){\n"
+    "vec2 force = vec2(0);\n"
+    "for(int i = 0; i < 2 * s; i+= 2){\n"
+        "vec2 xy = vec2(data[i], data[i + 1]);\n"
+        "vec2 ab = xy- gl_FragCoord.xy;\n"
+        "float dist = dot(ab,ab);\n"
+        "if(dist == 0){\n"
+            "continue;\n"
+        "}\n"
+        "force += masses[i/2]/ dist * normalize(ab) * 100;\n"
+    "}\n"
+    "float fl = length(force);\n"
+    "gl_FragColor = vec4(1.0, 0.0,0.0, 1.0 - 1.0/ fl);\n"
+    "}\n";
+    fieldVecShader.loadFromMemory(file, sf::Shader::Fragment);
     int idx = 0;
     int size = 0;
     int tracker = 0;
@@ -129,8 +148,6 @@ int main()
                         continue;
                     }
                     particles.push_back(new Particle(sf::Mouse::getPosition(window),currentMass, shift));
-                    points[tracker++] = &particles[particles.size() -1]->x;
-                    points[tracker++] = &particles[particles.size() -1]->y;
                     size++;
                     fieldVecShader.setUniform("s" , size);
                     currentMass = 100.0f;
